@@ -3,48 +3,33 @@ use std::io;
 use std::str;
 use mio::Token;
 use std::io::Read;
+use std::io::Write;
+use mio::net::TcpStream;
+use parser::Parser;
 
 pub struct Client {
     token: Token,
-    socket: Read,
+    socket: TcpStream,
+    parser: Parser,
 }
 
-const BUF_SIZE: usize = 1;
-
 impl Client {
-    pub fn new(token: Token, socket: Stream) -> Self {
-
+    pub fn new(token: Token, socket: TcpStream) -> Self {
         Client{
             token,
             socket,
+            parser: Parser::new(),
         }
     }
 
     pub fn process(&mut self) -> () {
-        let mut buf = [0; BUF_SIZE];
+        self.parser.parse(&mut self.socket);
+        self.socket.write("HTTP/1.1 200 OK
+Date: Mon, 27 Jul 2009 12:28:53 GMT
+Content-Type: text/html
 
-        loop {
-            match self.socket.read(&mut buf) {
-                Ok(0) => {
-                    println!("Connection: {:?} - Disconnect", &self.token);
-                    //sockets.remove(&token);
-                    break;
-                }
-                Ok(len) => {
-                    println!("Connection: {:?} - Got something", &self.token);
-                    println!("len: {:?}", len);
-                    println!("Buf: {:?}", str::from_utf8(&buf).unwrap());
-                    if (len < BUF_SIZE) {
-                        break;
-                    }
-                }
-                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    println!("Connection: {:?} - WouldBlock", &self.token);
-                    //sockets.remove(&token);
-                    break;
-                }
-                e => panic!("err={:?}", e), // Unexpected error
-            }
-        }
+<h1>foo</h1>
+".as_bytes()).unwrap();
+        self.socket.flush();
     }
 }

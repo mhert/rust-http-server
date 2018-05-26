@@ -21,14 +21,14 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    pub fn new(addr: SocketAddr) -> Self {
+    pub fn new(addr: SocketAddr) -> io::Result<Self> {
 
-        HttpServer{
-            listener: TcpListener::bind(&addr).unwrap(),
-            poll: Poll::new().unwrap(),
+        Ok(HttpServer{
+            listener: TcpListener::bind(&addr)?,
+            poll: Poll::new()?,
             clients: HashMap::new(),
             next_token: 1,
-        }
+        })
     }
 
     pub fn run(&mut self) -> () {
@@ -72,14 +72,19 @@ impl HttpServer {
                 }
             },
             token => {
-                let client = self.clients.get_mut(&token);
-                match client {
-                    Some(mut client) => {
-                        client.process()
+                {
+                    let client = self.clients.get_mut(&token);
+                    match client {
+                        Some(mut client) => {
+                            client.process();
+                        }
+                        None => {
+                            println!("No socket found for token")
+                        }
                     }
-                    None => {
-                        println!("No socket found for token")
-                    }
+                }
+                {
+                    self.clients.remove(&token);
                 }
             }
         }
